@@ -402,12 +402,6 @@ tesseract --list-langs  # Should show 'tha'
 # macOS: xcode-select --install
 # Linux: sudo apt install build-essential
 ```
-
----
-
-## 📝 License
-
-SNDLK01
 ---
 
 **Built with:** Go • Gin • GORM • Tesseract OCR
