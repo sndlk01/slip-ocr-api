@@ -407,8 +407,7 @@ tesseract --list-langs  # Should show 'tha'
 
 ## 📝 License
 
-This project is provided as-is for educational and commercial use.
-
+SNDLK01
 ---
 
 **Built with:** Go • Gin • GORM • Tesseract OCR
