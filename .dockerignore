@@ -1,0 +1,39 @@
+# Ignore in Docker builds
+.git
+.gitignore
+README.md
+DOCUMENTATION.md
+TESTING.md
+*.md
+
+# Development files
+.env
+.env.local
+*.log
+
+# Build artifacts
+*.exe
+ocr-api
+ocr-api.exe
+
+# Test files
+test_*.jpg
+test_*.png
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data directories (will be mounted as volumes)
+data/
+uploads/*
+!uploads/.gitkeep
+
+# Database
+*.sqlite
+*.db
