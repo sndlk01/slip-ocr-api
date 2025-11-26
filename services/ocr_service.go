@@ -17,24 +17,24 @@ func NewOCRService() *OCRService {
 	return &OCRService{}
 }
 
-func (s *OCRService) ProcessSlip(imagePath string, transactionType string) (*models.Transaction, error) {
+func (s *OCRService) ProcessSlip(imagePath string, transactionType string) (*models.Transaction, *models.Subscription, error) {
 	log.Printf("Processing slip: %s", imagePath)
 
 	jpegPath, err := ocr.ConvertToJPEG(imagePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert image: %w", err)
+		return nil, nil, fmt.Errorf("failed to convert image: %w", err)
 	}
 	defer s.cleanupFile(jpegPath)
 
 	processedPath, err := ocr.PreprocessImage(jpegPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to preprocess image: %w", err)
+		return nil, nil, fmt.Errorf("failed to preprocess image: %w", err)
 	}
 	defer s.cleanupFile(processedPath)
 
 	ocrText, err := ocr.PerformOCR(processedPath, config.AppConfig.TesseractLang)
 	if err != nil {
-		return nil, fmt.Errorf("failed to perform OCR: %w", err)
+		return nil, nil, fmt.Errorf("failed to perform OCR: %w", err)
 	}
 
 	log.Printf("OCR Text:\n%s\n", ocrText)
@@ -44,7 +44,7 @@ func (s *OCRService) ProcessSlip(imagePath string, transactionType string) (*mod
 
 	extractedData, err := ocr.ExtractData(ocrText)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract data: %w", err)
+		return nil, nil, fmt.Errorf("failed to extract data: %w", err)
 	}
 
 	normalizedDate := ocr.NormalizeDate(extractedData.Date)
@@ -61,9 +61,13 @@ func (s *OCRService) ProcessSlip(imagePath string, transactionType string) (*mod
 		RawOCRText: cleanedOCRText,
 	}
 
+	// Auto-detect subscription
+	subscriptionService := NewSubscriptionService()
+	detectedSub := subscriptionService.DetectSubscription(ocrText, extractedData.Amount)
+
 	log.Printf("Transaction created: %+v", transaction)
 
-	return transaction, nil
+	return transaction, detectedSub, nil
 }
 
 func (s *OCRService) cleanupFile(filePath string) {

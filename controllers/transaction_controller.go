@@ -102,6 +102,7 @@ type CreateTransactionRequest struct {
 	Bank      string  `json:"bank"`
 	Sender    string  `json:"sender"`
 	Receiver  string  `json:"receiver"`
+	Category  string  `json:"category"`
 	Detail    string  `json:"detail"`
 }
 
@@ -130,6 +131,7 @@ func (c *TransactionController) Create(ctx *gin.Context) {
 		Bank:      req.Bank,
 		Sender:    req.Sender,
 		Receiver:  req.Receiver,
+		Category:  req.Category,
 		Detail:    req.Detail,
 	}
 
@@ -154,6 +156,7 @@ type UpdateTransactionRequest struct {
 	Bank      *string  `json:"bank"`
 	Sender    *string  `json:"sender"`
 	Receiver  *string  `json:"receiver"`
+	Category  *string  `json:"category"`
 	Detail    *string  `json:"detail"`
 }
 
@@ -197,6 +200,9 @@ func (c *TransactionController) Update(ctx *gin.Context) {
 	if req.Receiver != nil {
 		updates["receiver"] = *req.Receiver
 	}
+	if req.Category != nil {
+		updates["category"] = *req.Category
+	}
 	if req.Detail != nil {
 		updates["detail"] = *req.Detail
 	}
@@ -219,5 +225,46 @@ func (c *TransactionController) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":     "Transaction updated successfully",
 		"transaction": transaction,
+	})
+}
+
+func (c *TransactionController) GetMonthlySummary(ctx *gin.Context) {
+	yearParam := ctx.Query("year")
+	monthParam := ctx.Query("month")
+
+	if yearParam == "" || monthParam == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "year and month query parameters are required (e.g., ?year=2025&month=11)",
+		})
+		return
+	}
+
+	year, err := strconv.Atoi(yearParam)
+	if err != nil || year < 2000 || year > 3000 {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid year format",
+		})
+		return
+	}
+
+	month, err := strconv.Atoi(monthParam)
+	if err != nil || month < 1 || month > 12 {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid month (must be 1-12)",
+		})
+		return
+	}
+
+	summary, categories, err := c.service.GetMonthlySummary(year, month)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get summary",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"summary":            summary,
+		"category_breakdown": categories,
 	})
 }

@@ -16,6 +16,7 @@ type Transaction struct {
 	Bank       string         `gorm:"type:varchar(50)" json:"bank,omitempty"`
 	Sender     string         `gorm:"type:varchar(200)" json:"sender,omitempty"`
 	Receiver   string         `gorm:"type:varchar(200)" json:"receiver,omitempty"`
+	Category   string         `gorm:"type:varchar(100)" json:"category"`
 	Detail     string         `gorm:"type:text" json:"detail"`
 	RawOCRText string         `gorm:"type:text" json:"raw_ocr_text,omitempty"`
 	CreatedAt  time.Time      `json:"created_at"`

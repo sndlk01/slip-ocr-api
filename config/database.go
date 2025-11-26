@@ -22,7 +22,11 @@ func InitDatabase() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	err = DB.AutoMigrate(&models.Transaction{})
+	err = DB.AutoMigrate(
+		&models.Transaction{},
+		&models.Budget{},
+		&models.Subscription{},
+	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

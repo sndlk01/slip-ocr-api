@@ -96,10 +96,18 @@ func (c *UploadController) UploadSlip(ctx *gin.Context) {
 		uploadPaths = append(uploadPaths, uploadPath)
 		log.Printf("File uploaded: %s (%.2f KB)", uniqueFilename, float64(file.Size)/1024)
 
-		transaction, err := c.ocrService.ProcessSlip(uploadPath, req.Type)
+		transaction, detectedSub, err := c.ocrService.ProcessSlip(uploadPath, req.Type)
 		if err != nil {
 			log.Printf("OCR processing failed for '%s': %v", file.Filename, err)
 			errors = append(errors, fmt.Sprintf("Failed to process '%s': %s", file.Filename, err.Error()))
+			continue
+		}
+
+		// Check for duplicates
+		duplicate, _ := c.transactionService.CheckDuplicate(transaction)
+		if duplicate != nil {
+			log.Printf("Duplicate transaction detected for '%s'", file.Filename)
+			errors = append(errors, fmt.Sprintf("Duplicate slip '%s' (already exists as transaction #%d)", file.Filename, duplicate.ID))
 			continue
 		}
 
@@ -107,6 +115,17 @@ func (c *UploadController) UploadSlip(ctx *gin.Context) {
 			log.Printf("Failed to save transaction for '%s': %v", file.Filename, err)
 			errors = append(errors, fmt.Sprintf("Failed to save transaction for '%s'", file.Filename))
 			continue
+		}
+
+		// Auto-save detected subscription
+		if detectedSub != nil {
+			detectedSub.NextBillingDate = transaction.Date
+			subscriptionService := services.NewSubscriptionService()
+			if err := subscriptionService.Create(detectedSub); err != nil {
+				log.Printf("Failed to save auto-detected subscription: %v", err)
+			} else {
+				log.Printf("Auto-detected subscription: %s", detectedSub.Name)
+			}
 		}
 
 		transactions = append(transactions, transaction)

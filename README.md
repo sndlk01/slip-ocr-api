@@ -9,20 +9,21 @@ A RESTful API built with Go for processing Thai bank payment slips using OCR (Op
 
 ## 🎯 Overview
 
-A complete transaction management API with OCR capabilities:
+A **complete financial management API** with OCR capabilities, budget tracking, and analytics:
 
-1. **Upload slip(s)** → Extract transaction data via OCR → Store in database
-2. **Create manual transactions** → For income/transfers without slips → Store in database
-3. **Update transactions** → Add details, correct amounts, categorize expenses
-4. **Query & manage** → Filter, view, and delete transactions
+1. **Upload slip(s)** → Auto-extract data via OCR → Detect duplicates → Save transactions
+2. **Budget management** → Set monthly limits → Track spending → Get warnings
+3. **Subscription tracking** → Auto-detect services → Monitor recurring payments
+4. **Analytics & insights** → Monthly trends → Yearly comparison → Category breakdown
 
-**Features:**
-- 📸 Multi-file upload support (process multiple slips at once)
-- 🤖 OCR for Thai bank slips (SCB, KBANK, BBL, KTB)
-- ✏️ Manual transaction creation (income/expense)
-- 🔄 Update transaction details anytime
-- 🔍 Filter by type (income/expense) and bank
-- 📝 Add custom descriptions/notes
+**Core Features:**
+- 📸 Multi-file upload with duplicate detection
+- 🤖 Advanced OCR for Thai bank slips (SCB, KBANK, BBL, KTB)
+- 💰 Budget system with automatic warnings
+- 🔄 Subscription auto-detection (Netflix, Spotify, etc.)
+- 📊 Dashboard APIs for data visualization
+- 📝 Category-based expense tracking
+- ✏️ Manual transaction creation and editing
 
 **Tech Stack:** Go, Gin, GORM, SQLite, Tesseract OCR
 
@@ -105,15 +106,39 @@ Server starts on `http://localhost:8077`
 
 ### Endpoints
 
+#### Core Transactions
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/health` | Health check |
-| `POST` | `/api/v1/upload` | Upload and process slip(s) - **supports multiple files** |
-| `POST` | `/api/v1/transactions` | **Create transaction manually** (income/expense) |
-| `GET` | `/api/v1/transactions` | Get all transactions (filter by type/bank) |
-| `GET` | `/api/v1/transactions/:id` | Get transaction by ID |
-| `PUT/PATCH` | `/api/v1/transactions/:id` | **Update transaction details** |
+| `POST` | `/api/v1/upload` | Upload slip(s) - **multi-file, duplicate detection, auto-detect subscriptions** |
+| `POST` | `/api/v1/transactions` | Create manual transaction |
+| `GET` | `/api/v1/transactions` | List transactions (filter by type/bank/category) |
+| `GET` | `/api/v1/transactions/:id` | Get transaction details |
+| `PUT/PATCH` | `/api/v1/transactions/:id` | Update transaction |
 | `DELETE` | `/api/v1/transactions/:id` | Delete transaction |
+
+#### Budget Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/budgets` | Create monthly budget |
+| `GET` | `/api/v1/budgets` | List all budgets |
+| `GET` | `/api/v1/budgets/status` | Get budget status (spent/remaining/warnings) |
+| `DELETE` | `/api/v1/budgets/:id` | Delete budget |
+
+#### Subscription Tracking
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/subscriptions` | Add subscription |
+| `GET` | `/api/v1/subscriptions` | List all subscriptions |
+| `DELETE` | `/api/v1/subscriptions/:id` | Delete subscription |
+
+#### Analytics & Dashboard
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/dashboard/monthly` | Monthly trend (12 months) |
+| `GET` | `/api/v1/dashboard/yearly` | Yearly comparison |
+| `GET` | `/api/v1/dashboard/categories` | Category breakdown (pie chart data) |
+| `GET` | `/api/v1/summary/monthly` | Monthly summary with categories |
 
 ---
 
@@ -493,27 +518,35 @@ curl -X DELETE http://localhost:8077/api/v1/transactions/1
 
 ```
 ocr-api/
-├── main.go                      # Entry point
-├── docker-compose.yml           # Docker setup
+├── main.go                          # Entry point
+├── docker-compose.yml               # Docker setup
 ├── config/
-│   ├── config.go               # Configuration
-│   └── database.go             # Database setup
+│   ├── config.go                   # Configuration
+│   └── database.go                 # Database setup (auto-migration)
 ├── models/
-│   └── transaction.go          # Transaction model
+│   ├── transaction.go              # Transaction model
+│   ├── budget.go                   # Budget model (NEW)
+│   └── subscription.go             # Subscription model (NEW)
 ├── controllers/
-│   ├── upload_controller.go    # Upload handler
-│   └── transaction_controller.go
+│   ├── upload_controller.go        # Upload handler (duplicate detection)
+│   ├── transaction_controller.go   # Transaction CRUD
+│   ├── budget_controller.go        # Budget management (NEW)
+│   ├── subscription_controller.go  # Subscription tracking (NEW)
+│   └── dashboard_controller.go     # Analytics endpoints (NEW)
 ├── services/
-│   ├── ocr_service.go          # OCR workflow
-│   └── transaction_service.go
+│   ├── ocr_service.go              # OCR workflow + subscription detection
+│   ├── transaction_service.go      # Transaction service + duplicate check
+│   ├── budget_service.go           # Budget calculations (NEW)
+│   ├── subscription_service.go     # Subscription auto-detection (NEW)
+│   └── dashboard_service.go        # Analytics & reporting (NEW)
 ├── ocr/
-│   ├── tesseract.go            # Tesseract wrapper
-│   ├── preprocessor.go         # Image preprocessing
-│   └── extractor.go            # Data extraction (regex)
+│   ├── tesseract.go                # Tesseract wrapper
+│   ├── preprocessor.go             # Image preprocessing
+│   └── extractor.go                # Data extraction (Thai date support)
 ├── routes/
-│   └── routes.go               # API routes
+│   └── routes.go                   # API routes (23 endpoints)
 └── utils/
-    └── helpers.go              # Utilities
+    └── helpers.go                  # Utilities (OCR text cleaning)
 ```
 
 ---
@@ -534,49 +567,86 @@ MAX_UPLOAD_SIZE=10485760           # Max file size (10MB)
 
 ## 🧪 Testing
 
+### Basic Tests
 ```bash
 # Health check
 curl http://localhost:8077/health
 
-# Upload single slip
+# Upload slip (with duplicate detection & subscription auto-detect)
 curl -X POST http://localhost:8077/api/v1/upload \
-  -F "slip=@test.jpg" \
+  -F "slip=@netflix_slip.jpg" \
   -F "type=expense"
 
 # Upload multiple slips
 curl -X POST http://localhost:8077/api/v1/upload \
   -F "slips=@slip1.jpg" \
   -F "slips=@slip2.jpg" \
-  -F "slips=@slip3.jpg" \
   -F "type=expense"
+```
 
-# Create manual transaction (income without slip)
+### Transaction Management
+```bash
+# Create manual transaction with category
 curl -X POST http://localhost:8077/api/v1/transactions \
   -H "Content-Type: application/json" \
   -d '{
     "type": "income",
     "amount": 5000,
     "date": "26/11/2025",
-    "detail": "รายได้จากการขาย"
+    "category": "รายได้จากการขาย",
+    "detail": "ขายสินค้าออนไลน์"
   }'
 
-# View all transactions
+# List all transactions
 curl http://localhost:8077/api/v1/transactions
 
-# Filter transactions
-curl "http://localhost:8077/api/v1/transactions?type=income"
-curl "http://localhost:8077/api/v1/transactions?bank=SCB"
+# Filter by category
+curl "http://localhost:8077/api/v1/transactions?type=expense&category=ค่าอาหาร"
 
-# View specific transaction
-curl http://localhost:8077/api/v1/transactions/1
-
-# Update transaction details
+# Update transaction
 curl -X PATCH http://localhost:8077/api/v1/transactions/1 \
   -H "Content-Type: application/json" \
-  -d '{"detail": "ค่าน้ำมัน"}'
+  -d '{"category": "ค่าเดินทาง", "detail": "ค่าน้ำมัน"}'
+```
 
-# Delete transaction
-curl -X DELETE http://localhost:8077/api/v1/transactions/1
+### Budget Management
+```bash
+# Set budget
+curl -X POST http://localhost:8077/api/v1/budgets \
+  -H "Content-Type: application/json" \
+  -d '{"category": "ค่าอาหาร", "monthly_limit": 5000, "month": 11, "year": 2025}'
+
+# Check budget status
+curl "http://localhost:8077/api/v1/budgets/status?year=2025&month=11"
+
+# List all budgets
+curl http://localhost:8077/api/v1/budgets
+```
+
+### Subscription Tracking
+```bash
+# List auto-detected subscriptions
+curl http://localhost:8077/api/v1/subscriptions
+
+# Add manual subscription
+curl -X POST http://localhost:8077/api/v1/subscriptions \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Spotify", "amount": 129, "billing_cycle": "monthly"}'
+```
+
+### Analytics & Dashboard
+```bash
+# Monthly trend
+curl "http://localhost:8077/api/v1/dashboard/monthly?year=2025"
+
+# Yearly comparison
+curl "http://localhost:8077/api/v1/dashboard/yearly?years=2024,2025"
+
+# Category breakdown
+curl "http://localhost:8077/api/v1/dashboard/categories?year=2025&month=11&type=expense"
+
+# Monthly summary
+curl "http://localhost:8077/api/v1/summary/monthly?year=2025&month=11"
 ```
 
 ---
@@ -608,27 +678,140 @@ tesseract --list-langs  # Should show 'tha'
 # Linux: sudo apt install build-essential
 ```
 
+### 8. Budget Management
+
+```bash
+POST /api/v1/budgets
+Content-Type: application/json
+```
+
+**Use Case:** Set monthly spending limits per category
+
+**Example:**
+```bash
+curl -X POST http://localhost:8077/api/v1/budgets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "ค่าอาหาร",
+    "monthly_limit": 5000,
+    "month": 11,
+    "year": 2025
+  }'
+```
+
+**Check Budget Status:**
+```bash
+curl "http://localhost:8077/api/v1/budgets/status?year=2025&month=11"
+```
+
+**Response:**
+```json
+{
+  "budget_status": [
+    {
+      "category": "ค่าอาหาร",
+      "monthly_limit": 5000,
+      "spent": 3200,
+      "remaining": 1800,
+      "percent_used": 64,
+      "status": "ok"
+    }
+  ]
+}
+```
+
 ---
 
-## 🆕 What's New in v2.0
+### 9. Subscription Tracking
+
+**Auto-detected subscriptions** are created automatically when uploading slips with recognized services (Netflix, Spotify, etc.)
+
+**Manual subscription:**
+```bash
+curl -X POST http://localhost:8077/api/v1/subscriptions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Netflix Premium",
+    "amount": 419,
+    "category": "บันเทิง",
+    "billing_cycle": "monthly",
+    "next_billing_date": "01/12/2025"
+  }'
+```
+
+**List subscriptions:**
+```bash
+curl http://localhost:8077/api/v1/subscriptions
+```
+
+---
+
+### 10. Dashboard Analytics
+
+**Monthly Trend (for line charts):**
+```bash
+curl "http://localhost:8077/api/v1/dashboard/monthly?year=2025"
+```
+
+**Response:**
+```json
+{
+  "monthly_trend": [
+    {"month": "01/2025", "income": 50000, "expense": 30000},
+    {"month": "02/2025", "income": 55000, "expense": 32000}
+  ]
+}
+```
+
+**Yearly Comparison:**
+```bash
+curl "http://localhost:8077/api/v1/dashboard/yearly?years=2023,2024,2025"
+```
+
+**Category Breakdown (for pie charts):**
+```bash
+curl "http://localhost:8077/api/v1/dashboard/categories?year=2025&month=11&type=expense"
+```
+
+**Response:**
+```json
+{
+  "category_breakdown": [
+    {"category": "ค่าอาหาร", "amount": 5000, "count": 25},
+    {"category": "ค่าเดินทาง", "amount": 3000, "count": 15}
+  ]
+}
+```
+
+---
+
+## 🆕 What's New in v3.0
 
 ### Major Features
-- ✅ **Multi-file upload** - Upload multiple slips in one request
-- ✅ **Manual transaction creation** - Add income/expense without slips
-- ✅ **Transaction updates** - Edit details, amounts, dates anytime
-- ✅ **Detail field** - Add custom descriptions/notes to transactions
-- ✅ **Improved OCR text** - Cleaner, more readable `raw_ocr_text`
+- 💰 **Budget Management** - Set monthly limits, track spending, get automatic warnings
+- 🔄 **Subscription Tracker** - Auto-detect recurring payments from OCR
+- 📊 **Dashboard Analytics** - Monthly trends, yearly comparison, category breakdowns
+- 🚫 **Duplicate Detection** - Prevent re-uploading the same slip
+- 🏷️ **Category System** - Organize expenses and income by category
+- 📅 **Thai Date Support** - Recognize "23 พ.ย. 68" format automatically
 
 ### API Changes
-- `POST /api/v1/upload` now supports `slips` (multiple) and `slip` (single)
-- `POST /api/v1/transactions` - Create manual transactions
-- `PUT/PATCH /api/v1/transactions/:id` - Update transactions
-- All transactions now include `detail` field in responses
+- **Budget System:** `POST /budgets`, `GET /budgets/status`
+- **Subscriptions:** `POST /subscriptions`, auto-detection from OCR
+- **Analytics:** `GET /dashboard/monthly`, `/dashboard/yearly`, `/dashboard/categories`
+- **Duplicate Check:** Automatic before saving transactions
+- **Category Field:** Added to all transaction endpoints
 
-### Migration from v1.0
+### Auto-Detection
+Upload a Netflix/Spotify slip → System automatically creates subscription entry!
+
+Supported services: Netflix, Spotify, YouTube Premium, LINE MAN, Grab, True ID, Disney+, iCloud, Google One, Adobe
+
+### Migration from v2.0
 1. Rebuild Docker: `docker-compose up -d --build`
-2. Database auto-migrates the new `detail` field
-3. Old API calls still work (backward compatible)
+2. Database auto-migrates new tables: `budgets`, `subscriptions`
+3. New field `category` added to transactions
+4. All existing API endpoints still work
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -640,6 +823,16 @@ This project is provided as-is for educational and commercial use.
 
 ---
 
-**Built with:** Go • Gin • GORM • Tesseract OCR
+**Built with:** Go • Gin • GORM • SQLite • Tesseract OCR
 
-*Last updated: November 26, 2025 (v2.0)*
+**Version:** 3.0.0
+*Last updated: November 26, 2025*
+
+---
+
+## 📈 API Statistics
+
+- **23 Total Endpoints**
+- **4 Main Features:** Transactions, Budgets, Subscriptions, Analytics
+- **10+ Auto-detected Services:** Netflix, Spotify, YouTube, etc.
+- **4 Database Tables:** transactions, budgets, subscriptions, analytics-ready structure
