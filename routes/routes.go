@@ -12,10 +12,15 @@ func SetupRoutes(router *gin.Engine) {
 
 	v1 := router.Group("/api/v1")
 	{
+		// Upload slip (supports multiple files)
 		v1.POST("/upload", uploadController.UploadSlip)
 
+		// Transaction CRUD operations
+		v1.POST("/transactions", transactionController.Create)
 		v1.GET("/transactions", transactionController.GetAll)
 		v1.GET("/transactions/:id", transactionController.GetByID)
+		v1.PUT("/transactions/:id", transactionController.Update)
+		v1.PATCH("/transactions/:id", transactionController.Update)
 		v1.DELETE("/transactions/:id", transactionController.Delete)
 	}
 

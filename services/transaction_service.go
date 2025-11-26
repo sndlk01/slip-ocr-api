@@ -66,3 +66,18 @@ func (s *TransactionService) GetByBank(bank string) ([]models.Transaction, error
 	}
 	return transactions, nil
 }
+
+func (s *TransactionService) Update(id uint, updates map[string]interface{}) (*models.Transaction, error) {
+	var transaction models.Transaction
+	result := config.DB.First(&transaction, id)
+	if result.Error != nil {
+		return nil, fmt.Errorf("transaction not found: %w", result.Error)
+	}
+
+	result = config.DB.Model(&transaction).Updates(updates)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to update transaction: %w", result.Error)
+	}
+
+	return &transaction, nil
+}

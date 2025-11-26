@@ -39,6 +39,9 @@ func (s *OCRService) ProcessSlip(imagePath string, transactionType string) (*mod
 
 	log.Printf("OCR Text:\n%s\n", ocrText)
 
+	// Clean OCR text for better readability
+	cleanedOCRText := utils.CleanOCRText(ocrText)
+
 	extractedData, err := ocr.ExtractData(ocrText)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract data: %w", err)
@@ -55,7 +58,7 @@ func (s *OCRService) ProcessSlip(imagePath string, transactionType string) (*mod
 		Bank:       extractedData.Bank,
 		Sender:     extractedData.Sender,
 		Receiver:   extractedData.Receiver,
-		RawOCRText: ocrText,
+		RawOCRText: cleanedOCRText,
 	}
 
 	log.Printf("Transaction created: %+v", transaction)
