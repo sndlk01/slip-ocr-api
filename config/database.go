@@ -23,6 +23,7 @@ func InitDatabase() {
 	}
 
 	err = DB.AutoMigrate(
+		&models.User{},
 		&models.Transaction{},
 		&models.Budget{},
 		&models.Subscription{},

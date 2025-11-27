@@ -17,6 +17,7 @@ A **complete financial management API** with OCR capabilities, budget tracking, 
 4. **Analytics & insights** → Monthly trends → Yearly comparison → Category breakdown
 
 **Core Features:**
+- 🔐 User authentication with JWT tokens (Login/Register)
 - 📸 Multi-file upload with duplicate detection
 - 🤖 Advanced OCR for Thai bank slips (SCB, KBANK, BBL, KTB)
 - 💰 Budget system with automatic warnings
@@ -106,6 +107,13 @@ Server starts on `http://localhost:8077`
 
 ### Endpoints
 
+#### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/register` | Register new user |
+| `POST` | `/api/v1/auth/login` | Login and get JWT token |
+| `GET` | `/api/v1/auth/profile` | Get user profile (requires auth) |
+
 #### Core Transactions
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -163,7 +171,144 @@ curl http://localhost:8077/health
 
 ---
 
-### 2. Upload Payment Slip(s)
+### 2. User Registration
+
+```bash
+POST /api/v1/auth/register
+Content-Type: application/json
+```
+
+**Parameters:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | String | Yes | Unique username |
+| `email` | String | Yes | Valid email address |
+| `password` | String | Yes | Password (min 6 characters) |
+| `full_name` | String | No | Full name |
+
+**Example:**
+```bash
+curl -X POST http://localhost:8077/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "somchai",
+    "email": "somchai@example.com",
+    "password": "mypassword123",
+    "full_name": "นายสมชาย ใจดี"
+  }'
+```
+
+**Response (201):**
+```json
+{
+  "message": "User registered successfully",
+  "user": {
+    "id": 1,
+    "username": "somchai",
+    "email": "somchai@example.com",
+    "full_name": "นายสมชาย ใจดี",
+    "created_at": "2025-11-27T10:00:00Z"
+  }
+}
+```
+
+**Error Responses:**
+```json
+// 400 - Validation error
+{ "error": "Invalid request body" }
+
+// 400 - Duplicate user
+{ "error": "username or email already exists" }
+```
+
+---
+
+### 3. User Login
+
+```bash
+POST /api/v1/auth/login
+Content-Type: application/json
+```
+
+**Parameters:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | String | Yes | Username or email |
+| `password` | String | Yes | Password |
+
+**Example:**
+```bash
+curl -X POST http://localhost:8077/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "somchai",
+    "password": "mypassword123"
+  }'
+```
+
+**Response (200):**
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "username": "somchai",
+    "email": "somchai@example.com",
+    "full_name": "นายสมชาย ใจดี",
+    "created_at": "2025-11-27T10:00:00Z"
+  }
+}
+```
+
+**Error Response (401):**
+```json
+{ "error": "invalid username or password" }
+```
+
+**Note:** Save the `token` value and include it in subsequent API requests using the `Authorization` header:
+```bash
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+---
+
+### 4. Get User Profile
+
+```bash
+GET /api/v1/auth/profile
+Authorization: Bearer <token>
+```
+
+**Example:**
+```bash
+curl http://localhost:8077/api/v1/auth/profile \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Response (200):**
+```json
+{
+  "user": {
+    "id": 1,
+    "username": "somchai",
+    "email": "somchai@example.com",
+    "full_name": "นายสมชาย ใจดี",
+    "created_at": "2025-11-27T10:00:00Z"
+  }
+}
+```
+
+**Error Response (401):**
+```json
+{ "error": "Unauthorized" }
+```
+
+---
+
+### 5. Upload Payment Slip(s)
 
 ```bash
 POST /api/v1/upload
@@ -277,7 +422,7 @@ fetch('http://localhost:8077/api/v1/upload', {
 
 ---
 
-### 3. Create Transaction Manually
+### 6. Create Transaction Manually
 
 ```bash
 POST /api/v1/transactions
@@ -336,7 +481,7 @@ curl -X POST http://localhost:8077/api/v1/transactions \
 
 ---
 
-### 4. Get All Transactions
+### 7. Get All Transactions
 
 ```bash
 GET /api/v1/transactions
@@ -384,7 +529,7 @@ curl "http://localhost:8077/api/v1/transactions?type=income&bank=SCB"
 
 ---
 
-### 5. Get Transaction by ID
+### 8. Get Transaction by ID
 
 ```bash
 GET /api/v1/transactions/:id
@@ -422,7 +567,7 @@ curl http://localhost:8077/api/v1/transactions/1
 
 ---
 
-### 6. Update Transaction
+### 9. Update Transaction
 
 ```bash
 PUT /api/v1/transactions/:id
@@ -494,7 +639,7 @@ curl -X PUT http://localhost:8077/api/v1/transactions/1 \
 
 ---
 
-### 7. Delete Transaction
+### 10. Delete Transaction
 
 ```bash
 DELETE /api/v1/transactions/:id
@@ -524,29 +669,33 @@ ocr-api/
 │   ├── config.go                   # Configuration
 │   └── database.go                 # Database setup (auto-migration)
 ├── models/
+│   ├── user.go                     # User model (Authentication)
 │   ├── transaction.go              # Transaction model
-│   ├── budget.go                   # Budget model (NEW)
-│   └── subscription.go             # Subscription model (NEW)
+│   ├── budget.go                   # Budget model
+│   └── subscription.go             # Subscription model
 ├── controllers/
+│   ├── auth_controller.go          # Authentication (Login/Register)
 │   ├── upload_controller.go        # Upload handler (duplicate detection)
 │   ├── transaction_controller.go   # Transaction CRUD
-│   ├── budget_controller.go        # Budget management (NEW)
-│   ├── subscription_controller.go  # Subscription tracking (NEW)
-│   └── dashboard_controller.go     # Analytics endpoints (NEW)
+│   ├── budget_controller.go        # Budget management
+│   ├── subscription_controller.go  # Subscription tracking
+│   └── dashboard_controller.go     # Analytics endpoints
 ├── services/
+│   ├── auth_service.go             # Authentication service (JWT)
 │   ├── ocr_service.go              # OCR workflow + subscription detection
 │   ├── transaction_service.go      # Transaction service + duplicate check
-│   ├── budget_service.go           # Budget calculations (NEW)
-│   ├── subscription_service.go     # Subscription auto-detection (NEW)
-│   └── dashboard_service.go        # Analytics & reporting (NEW)
+│   ├── budget_service.go           # Budget calculations
+│   ├── subscription_service.go     # Subscription auto-detection
+│   └── dashboard_service.go        # Analytics & reporting
 ├── ocr/
 │   ├── tesseract.go                # Tesseract wrapper
 │   ├── preprocessor.go             # Image preprocessing
 │   └── extractor.go                # Data extraction (Thai date support)
 ├── routes/
-│   └── routes.go                   # API routes (23 endpoints)
+│   └── routes.go                   # API routes (26 endpoints)
 └── utils/
-    └── helpers.go                  # Utilities (OCR text cleaning)
+    ├── helpers.go                  # Utilities (OCR text cleaning)
+    └── jwt.go                      # JWT token generation & validation
 ```
 
 ---
@@ -678,7 +827,7 @@ tesseract --list-langs  # Should show 'tha'
 # Linux: sudo apt install build-essential
 ```
 
-### 8. Budget Management
+### 11. Budget Management
 
 ```bash
 POST /api/v1/budgets
@@ -722,7 +871,7 @@ curl "http://localhost:8077/api/v1/budgets/status?year=2025&month=11"
 
 ---
 
-### 9. Subscription Tracking
+### 12. Subscription Tracking
 
 **Auto-detected subscriptions** are created automatically when uploading slips with recognized services (Netflix, Spotify, etc.)
 
@@ -746,7 +895,7 @@ curl http://localhost:8077/api/v1/subscriptions
 
 ---
 
-### 10. Dashboard Analytics
+### 13. Dashboard Analytics
 
 **Monthly Trend (for line charts):**
 ```bash
@@ -785,9 +934,15 @@ curl "http://localhost:8077/api/v1/dashboard/categories?year=2025&month=11&type=
 
 ---
 
-## 🆕 What's New in v3.0
+## 🆕 What's New in v3.1
 
-### Major Features
+### Latest Features (v3.1.0)
+- 🔐 **User Authentication** - Register and login with JWT tokens
+- 👤 **User Profiles** - Get authenticated user information
+- 🔒 **Secure API** - Password hashing with bcrypt
+- 🎫 **JWT Tokens** - 24-hour token expiration
+
+### Previous Features (v3.0)
 - 💰 **Budget Management** - Set monthly limits, track spending, get automatic warnings
 - 🔄 **Subscription Tracker** - Auto-detect recurring payments from OCR
 - 📊 **Dashboard Analytics** - Monthly trends, yearly comparison, category breakdowns
@@ -825,14 +980,14 @@ This project is provided as-is for educational and commercial use.
 
 **Built with:** Go • Gin • GORM • SQLite • Tesseract OCR
 
-**Version:** 3.0.0
-*Last updated: November 26, 2025*
+**Version:** 3.1.0
+*Last updated: November 27, 2025*
 
 ---
 
 ## 📈 API Statistics
 
-- **23 Total Endpoints**
-- **4 Main Features:** Transactions, Budgets, Subscriptions, Analytics
+- **26 Total Endpoints**
+- **5 Main Features:** Authentication, Transactions, Budgets, Subscriptions, Analytics
 - **10+ Auto-detected Services:** Netflix, Spotify, YouTube, etc.
-- **4 Database Tables:** transactions, budgets, subscriptions, analytics-ready structure
+- **5 Database Tables:** users, transactions, budgets, subscriptions, analytics-ready structure

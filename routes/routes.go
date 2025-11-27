@@ -7,6 +7,7 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine) {
+	authController := controllers.NewAuthController()
 	uploadController := controllers.NewUploadController()
 	transactionController := controllers.NewTransactionController()
 	budgetController := controllers.NewBudgetController()
@@ -15,6 +16,11 @@ func SetupRoutes(router *gin.Engine) {
 
 	v1 := router.Group("/api/v1")
 	{
+		// Authentication endpoints
+		v1.POST("/auth/register", authController.Register)
+		v1.POST("/auth/login", authController.Login)
+		v1.GET("/auth/profile", authController.GetProfile)
+
 		// Upload slip (supports multiple files)
 		v1.POST("/upload", uploadController.UploadSlip)
 

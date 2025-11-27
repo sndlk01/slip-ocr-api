@@ -2,6 +2,78 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2025-11-27
+
+### Added - Authentication System
+
+#### 1. User Authentication
+- **NEW: Complete authentication system with JWT**
+  - User registration with email validation
+  - Secure login with password hashing (bcrypt)
+  - JWT token generation with 24-hour expiration
+  - User profile retrieval
+- **Endpoints:**
+  - `POST /api/v1/auth/register` - Register new user
+  - `POST /api/v1/auth/login` - Login and receive JWT token
+  - `GET /api/v1/auth/profile` - Get authenticated user profile
+
+#### 2. Security Features
+- **Password Hashing:** All passwords are hashed using bcrypt before storage
+- **JWT Tokens:** Secure authentication with HS256 signing method
+- **Token Validation:** Automatic token expiration after 24 hours
+- **Input Validation:** Email format validation and password minimum length (6 characters)
+
+#### 3. User Model
+- **Added `User` model with fields:**
+  - `id` - Primary key
+  - `username` - Unique username
+  - `email` - Unique email address
+  - `password` - Hashed password (never returned in JSON)
+  - `full_name` - Optional full name
+  - `created_at`, `updated_at` - Timestamps
+
+### Improved
+
+#### Database Migration
+- **Auto-migration for Users table**
+  - Added to existing migration system
+  - Automatically creates `users` table on startup
+
+### Dependencies
+
+#### New Dependencies
+- `github.com/golang-jwt/jwt/v5` - JWT token generation and validation
+- `golang.org/x/crypto/bcrypt` - Password hashing (already included)
+
+### Files Added
+
+- `models/user.go` - User model definition
+- `services/auth_service.go` - Authentication business logic
+- `controllers/auth_controller.go` - Authentication HTTP handlers
+- `utils/jwt.go` - JWT token utilities
+
+### Files Modified
+
+- `config/database.go` - Added User model to auto-migration
+- `routes/routes.go` - Added authentication endpoints
+- `README.md` - Updated documentation with auth endpoints
+- `go.mod` - Added JWT dependency
+
+### Migration Notes
+
+1. **Database:** Application will auto-migrate the new `users` table on startup
+2. **No Breaking Changes:** All existing APIs remain unchanged
+3. **Optional Feature:** Authentication is available but not required for existing endpoints
+4. **Docker:** Rebuild image with `docker-compose up -d --build`
+
+### API Statistics Update
+
+- **Total Endpoints:** 23 → 26 (+3 auth endpoints)
+- **Database Tables:** 4 → 5 (+users table)
+- **Main Features:** 4 → 5 (+Authentication)
+
+---
+
 ## [3.0.0] - 2025-11-26
 
 ### Added - Major Features
