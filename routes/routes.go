@@ -2,6 +2,7 @@ package routes
 
 import (
 	"ocr-api/controllers"
+	"ocr-api/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +20,7 @@ func SetupRoutes(router *gin.Engine) {
 		// Authentication endpoints
 		v1.POST("/auth/register", authController.Register)
 		v1.POST("/auth/login", authController.Login)
-		v1.GET("/auth/profile", authController.GetProfile)
+		v1.GET("/auth/profile", utils.AuthMiddleware(), authController.GetProfile)
 
 		// Upload slip (supports multiple files)
 		v1.POST("/upload", uploadController.UploadSlip)
